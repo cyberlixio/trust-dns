@@ -75,11 +75,7 @@ impl Resolver {
     /// # Returns
     ///
     /// A new `Resolver` or an error if there was an error with the configuration.
-    pub fn new(config: ResolverConfig, options: ResolverOpts) -> io::Result<Self> {
-        let mut builder = runtime::Builder::new_current_thread();
-        builder.enable_all();
-
-        let runtime = builder.build()?;
+    pub fn new(config: ResolverConfig, options: ResolverOpts, runtime: Runtime) -> io::Result<Self> {
         let async_resolver = AsyncResolver::new(config, options, TokioHandle::default())
             .expect("failed to create resolver");
 
