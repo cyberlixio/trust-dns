@@ -34,7 +34,6 @@ pub struct Resolver {
     // TODO: Mutex allows this to be Sync, another option would be to instantiate a thread_local, but that has other
     //   drawbacks. One major issues, is if this Resolver is shared across threads, it will cause all to block on any
     //   query. A TLS on the other hand would not, at the cost of only allowing a Resolver to be configured once per Thread
-    runtime: Mutex<Runtime>,
     async_resolver: AsyncResolver<TokioConnection, TokioConnectionProvider>,
 }
 
@@ -49,6 +48,7 @@ macro_rules! lookup_fn {
         /// * `query` - a `&str` which parses to a domain name, failure to parse will return an error
         pub fn $p<N: IntoName>(&self, query: N) -> ResolveResult<$l> {
             let lookup = self.async_resolver.$p(query);
+            lookup
         }
     };
     ($p:ident, $l:ty, $t:ty) => {
@@ -59,6 +59,7 @@ macro_rules! lookup_fn {
         /// * `query` - a type which can be converted to `Name` via `From`.
         pub fn $p(&self, query: $t) -> ResolveResult<$l> {
             let lookup = self.async_resolver.$p(query);
+            lookup
         }
     };
 }
@@ -74,15 +75,10 @@ impl Resolver {
     ///
     /// A new `Resolver` or an error if there was an error with the configuration.
     pub fn new(config: ResolverConfig, options: ResolverOpts) -> io::Result<Self> {
-        let mut builder = runtime::Builder::new_current_thread();
-        builder.enable_all();
-
-        let runtime = builder.build()?;
         let async_resolver = AsyncResolver::new(config, options, TokioHandle::default())
             .expect("failed to create resolver");
 
         Ok(Self {
-            runtime: Mutex::new(runtime),
             async_resolver,
         })
     }
@@ -126,8 +122,7 @@ impl Resolver {
     /// * `name` - name of the record to lookup, if name is not a valid domain name, an error will be returned
     /// * `record_type` - type of record to lookup
     pub fn lookup<N: IntoName>(&self, name: N, record_type: RecordType) -> ResolveResult<Lookup> {
-        let lookup = self.async_resolver.lookup(name, record_type);
-        lookup.await
+        self.async_resolver.lookup(name, record_type)
     }
 
     /// Performs a dual-stack DNS lookup for the IP for the given hostname.
@@ -138,8 +133,7 @@ impl Resolver {
     ///
     /// * `host` - string hostname, if this is an invalid hostname, an error will be returned.
     pub fn lookup_ip<N: IntoName + TryParseIp>(&self, host: N) -> ResolveResult<LookupIp> {
-        let lookup = self.async_resolver.lookup_ip(host);
-        lookup.await
+        self.async_resolver.lookup_ip(host)
     }
 
     lookup_fn!(reverse_lookup, lookup::ReverseLookup, IpAddr);
