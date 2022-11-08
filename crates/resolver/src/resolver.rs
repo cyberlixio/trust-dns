@@ -126,7 +126,7 @@ impl Resolver {
     /// * `name` - name of the record to lookup, if name is not a valid domain name, an error will be returned
     /// * `record_type` - type of record to lookup
     pub fn lookup<N: IntoName>(&self, name: N, record_type: RecordType) -> ResolveResult<Lookup> {
-        let lookup = self.async_resolver.lookup(name, record_type)
+        let lookup = self.async_resolver.lookup(name, record_type).await;
     }
 
     /// Performs a dual-stack DNS lookup for the IP for the given hostname.
@@ -137,7 +137,7 @@ impl Resolver {
     ///
     /// * `host` - string hostname, if this is an invalid hostname, an error will be returned.
     pub fn lookup_ip<N: IntoName + TryParseIp>(&self, host: N) -> ResolveResult<LookupIp> {
-        let lookup = self.async_resolver.lookup_ip(host)
+        let lookup = self.async_resolver.lookup_ip(host).await;
     }
 
     lookup_fn!(reverse_lookup, lookup::ReverseLookup, IpAddr);
